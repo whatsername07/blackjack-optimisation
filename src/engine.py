@@ -46,4 +46,41 @@ class Shoe:
             self.cut_card_reached = True
         return self.cards.pop()
 
-    
+class Hand:
+    """Dynamically calculates hand totals and tracks soft ace conversions"""
+    def __init__(self):
+        self.cards: List[Card] = []
+
+    def add_card(self, card: Card) -> None:
+        self.cards.append(card)
+
+    @property
+    def value_and_softness(self) -> Tuple[int, bool]:
+        """Returns (best_total, is_soft), Converts aces from 11 to 1 to prevent busting"""
+        total = sum(c.value for c in self.cards)
+        num_aces = sum(1 for c in self.cards if c.rank == "A")
+
+        # downgrade aces from 11 to 1 as needed
+        while total > 21 and num_aces > 0:
+            total -= 10
+            num_aces -= 1
+
+        is_soft = num_aces >0 and total <= 21
+        return total, is_soft
+
+    @property
+    def total(self) -> int:
+        return self.value_and_softness[0]
+
+    @property
+    def is_soft(self) -> bool:
+        return self.value_and_softness[1]
+
+    @property
+    def is_blackjack(self) -> bool:
+        return len(self.cards) == 2 and self.total == 21
+
+    @property
+    def is_bust(self) -> bool:
+        return self.total > 21
+
