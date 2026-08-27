@@ -84,3 +84,71 @@ class Hand:
     def is_bust(self) -> bool:
         return self.total > 21
 
+class BlackjackGame:
+    """Coordinates one round of play between the dealer and agent"""
+
+    def __init__(self, shoe: Shoe, hit_soft_17: bool = False):
+        self.shoe = shoe
+        self.hit_soft_17 = hit_soft_17
+
+        def play_round(self, strategy_agent, base_bet: float=1.0) -> float:
+            """Executes a complete round and returns the net unit profit/loss"""
+            if self.shoe.cut_card_reached:
+                self.shoe.reset_and_shuffle()
+
+            player_hand = Hand()
+            dealer_hand = Hand()
+
+            # Initial 2 card deal
+            player_hand.add_card(self.shoe.deal_card())
+            dealer_hand.add_card(self.shoe.deal_card())
+            player_hand.add_card(self.shoe.deal_card())
+            dealer_hand.add_card(self.shoe.deal_card())
+
+            dealer_upcard = dealer_hand.cards[0]
+
+            # check natural blackjacks
+            if player_hand.is_blackjack:
+                if dealer_hand.is_blackjack:
+                    return 0.0 # push
+                return 1.5*base_bet # standard 3:2 payout
+
+            if dealer_hand.is_blackjack:
+                return -1.0*base_bet
+
+            # player turn
+            current_bet = base_bet
+            while not player_hand.is_bust:
+                action = strategy_agent.get_action(player_hand, dealer_upcard)
+
+                if action == Action.STAND:
+                    break
+                elif action == Action.HIT:
+                    player_hand.add_card(self.shoe.deal_card())
+                elif action == Action.DOUBLE:
+                    current_bet *= 2.0
+                    player_hand.add_card(self.shoe.deal_card())
+                    break # doubling receives exactly one card and ends turn
+
+            if player_hand.is_bust:
+                return -current_bet
+
+            while True:
+                total = dealer_hand.total
+                is_soft = dealer_hand.is_soft
+
+                if total < 17 or (self.hit_soft_17 and total == 17 and is_soft):
+                    dealer_hand.add_card(self.shoe.deal_card())
+                else:
+                    break
+
+            # resolve payout
+            dealer_total = dealer_hand.total
+            player_total = player_hand.total
+
+            if dealer_hand.is_bust or player_total > dealer_total:
+                return current_bet
+            elif player_total < dealer_total:
+                return -current_bet
+            else:
+                return 0.0
