@@ -23,6 +23,7 @@ class BaseStrategy(ABC):
             An Action enum (e.g. Action.HIT, Action.STAND).
         """
         pass
+    
     def get_bet_size(self, base_bet: float, **kwargs: Any) -> float:
         """
         Determine the bet size for the upcoming game.
