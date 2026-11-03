@@ -1,0 +1,26 @@
+# Data Processing & Core Engine
+numpy>=1.26.0
+pandas>=2.1.0
+polars>=0.20.0
+scipy>=1.11.0
+
+# Machine Learning & AI
+torch>=2.2.0
+xgboost>=2.0.0
+
+# Database & SQL Analytics
+duckdb>=0.9.0
+
+# Visualization (For Jupyter Notebooks)
+matplotlib>=3.8.0
+seaborn>=0.13.0
+plotly>=5.18.0
+
+# Testing, CI/CD & Code Quality
+pytest>=8.0.0
+pytest-cov>=4.1.0
+ruff>=0.3.0
+
+# Notebook Environment
+jupyter>=1.0.0
+ipykernel>=6.29.0
