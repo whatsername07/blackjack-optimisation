@@ -78,3 +78,94 @@ def test_bust_detection(empty_hand):
     assert empty_hand.is_bust
 
 # Shoe and Penetration Mechanics Tests
+
+def test_shoe_card_count(standard_shoe):
+    assert len(standard_shoe.cards) == 6*52
+
+def test_cut_card_penetration_flag():
+    shoe = Shoe(num_decks=1, penetration=0.5)
+    # Deal out over 50% of the 52 cards
+    for _ in range(27):
+        shoe.deal_card()
+    assert shoe.cut_card_reached is True
+
+def test_shoe_resets_and_shuffles(standard_shoe):
+    # Drain half the cards
+    for _ in range(156):
+        standard_shoe.deal_card()
+    assert len(standard_shoe.cards) == 156
+
+    standard_shoe.reset_and_shuffle()
+    assert len(standard_shoe.cards) == 312
+    assert standard_shoe.cut_card_reached is False
+
+# Game Outcomes and Payout Assertions
+
+def test_natural_blackjack_payout(monkeypatch):
+    """ Player gets A + K, Dealer gets 10 + 8 -> Standard 3:2 payout (+1.5) """
+    shoe = Shoe(num_decks=1)
+
+    # Mock dealing order, P D P D
+    mock_cards = [
+        Card("8","DIAMOND"),
+        Card("K", "CLUB"),
+        Card("10", "SPADE"),
+        Card("A", "SPADE")
+    ]
+    # Patch the deal_card method to return our mock cards in order
+    monkeypatch.setattr(shoe, "deal_card", lambda: mock_cards.pop())
+
+    game = BlackjackGame(shoe=shoe)
+    dummy_strategy = StandOnFirstActionStrategy()
+
+    payout = game.play_round(dummy_strategy, base_bet=10.0)
+    assert payout == 15.0
+
+def test_player_bust_immediate_loss(monkeypatch):
+    """ Player busts, dealer also would have busted -> Player still loses (dealer advantage) """
+    shoe = Shoe(num_decks=1)
+
+    # Hand sequence setup
+    cards = [
+        Card("10", "SPADE"),
+        Card("5", "DIAMOND"),
+        Card("6", "CLUB"),
+        Card("6", "HEART"),
+        Card("10", "DIAMOND")
+    ]
+
+    # Reverse so pop() serves in correct order
+    cards.reverse()
+    monkeypatch.setattr(shoe, "deal_card", lambda: cards.pop())
+
+    class AlwaysHitOnceStrategy(BaseStrategy):
+        def __init__(self):
+            self.hit_count = 0
+        def get_action(self, player_hand: Hand, dealer_upcard: Card, **kwargs) -> Action:
+            if self.hit_count == 0:
+                self.hit_count += 1
+                return Action.HIT
+            return Action.STAND
+
+    game = BlackjackGame(shoe=shoe)
+    payout = game.play_round(AlwaysHitOnceStrategy(), base_bet=10.0)
+    assert payout == -10.0
+
+def test_double_down_doubles_wager(monkeypatch):
+    """ Doubling down doubles the original stake and awards exactly one card. """
+    shoe = Shoe(num_decks=1)
+
+    cards = [
+        Card("5", "SPADE"),
+        Card("6", "DIAMOND"),
+        Card("6", "CLUB"),
+        Card("10", "HEART"),
+        Card("9", "SPADE"),
+        Card("10", "DIAMOND")
+    ]
+    cards.reverse()
+    monkeypatch.setattr(shoe, "get_card", lambda: cards.pop())
+
+    game = BlackjackGame(shoe=shoe)
+    payout = game.play_round(AlwaysDoubleStrategy(), base_bet=10.0)
+    assert payout == 20.0
